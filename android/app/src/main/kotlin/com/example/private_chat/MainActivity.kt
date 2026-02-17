@@ -1,4 +1,4 @@
-package com.chatapp.appnewsmore
+package com.chatapp.appnewsmore2
 
 import io.flutter.embedding.android.FlutterActivity
 
