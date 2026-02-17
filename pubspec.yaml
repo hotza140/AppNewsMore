@@ -50,11 +50,7 @@ dependencies:
   image_picker: ^1.1.2
   uuid: ^4.5.1
   firebase_messaging: ^15.2.10
-<<<<<<< HEAD
   file_picker: 8.0.0
-=======
-  file_picker: ^8.0.0
->>>>>>> 6aa29aa18553b3e76c04f812f730e09db6118e3c
   permission_handler: ^10.4.0
   flutter_app_badger: ^1.5.0
   gallery_saver_plus: ^3.2.9
