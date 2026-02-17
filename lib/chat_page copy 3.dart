@@ -23,7 +23,7 @@ class _ChatPageState extends State<ChatPage> {
   String searchNameText = ''; // ✅ NEW: ค้นชื่อแชท
   bool isLoading = false;
 
-  final Map<String, int> _unreadCount = {}; // ✅ key = groupId (String)
+  Map<int, int> _unreadCount = {};
   final Map<String, int> _lastMsgTs = {}; // ✅ groupId -> timestamp (ms)
   final Set<String> _msgListeningRooms = {};
   
@@ -301,6 +301,8 @@ void _listenPinForRoom(String groupId) {
     if (_msgListeningRooms.contains(groupId)) continue;
     _msgListeningRooms.add(groupId);
 
+    final groupIdInt = int.tryParse(groupId) ?? -1;
+
     FirebaseFirestore.instance
         .collection('chat_groups')
         .doc(groupId)
@@ -341,15 +343,14 @@ if (ts is Timestamp) {
       if (!mounted) return;
 
      // ✅ 2) กัน rebuild ถ้าทั้ง unread และเวลาไม่เปลี่ยน
-  final prevUnread = _unreadCount[groupId] ?? 0;
+  final prevUnread = _unreadCount[groupIdInt] ?? 0;
   final prevLast = _lastMsgTs[groupId] ?? 0;
   if (prevUnread == unreadCount && prevLast == lastMs) return;
 
-  
-setState(() {
-  _unreadCount[groupId] = unreadCount;   // ✅ ใช้ String
-  _lastMsgTs[groupId] = lastMs;
-});
+  setState(() {
+    _unreadCount[groupIdInt] = unreadCount;
+    _lastMsgTs[groupId] = lastMs; // ✅ เก็บเวลาใหม่สุดของห้อง
+  });
   });
   }
 }
@@ -489,8 +490,8 @@ final filteredGroups = chatGroups.where((group) {
   if (pinnedCmp != 0) return pinnedCmp;
 
   // 2) ห้องที่มี unread มาก่อน
- final aUnread = _unreadCount[aId] ?? 0;
-final bUnread = _unreadCount[bId] ?? 0;
+  final aUnread = _unreadCount[int.tryParse(aId) ?? -1] ?? 0;
+  final bUnread = _unreadCount[int.tryParse(bId) ?? -1] ?? 0;
   final aHasUnread = aUnread > 0 ? 1 : 0;
   final bHasUnread = bUnread > 0 ? 1 : 0;
   final hasUnreadCmp = bHasUnread.compareTo(aHasUnread);
@@ -641,8 +642,10 @@ final bUnread = _unreadCount[bId] ?? 0;
                               final group = filteredGroups[index];
 
                               final groupId = group['id'].toString();
+                              final groupIdInt =
+                                  int.tryParse(group['id'].toString()) ?? -1;
 
-                             final unreadCount = _unreadCount[groupId] ?? 0; // ✅ ใช้ groupId string
+                              final unreadCount = _unreadCount[groupIdInt] ?? 0;
 
                               // mute state
                               final isMuted = _mutedRooms[groupId] == true;

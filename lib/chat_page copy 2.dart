@@ -23,10 +23,7 @@ class _ChatPageState extends State<ChatPage> {
   String searchNameText = ''; // ✅ NEW: ค้นชื่อแชท
   bool isLoading = false;
 
-  final Map<String, int> _unreadCount = {}; // ✅ key = groupId (String)
-  final Map<String, int> _lastMsgTs = {}; // ✅ groupId -> timestamp (ms)
-  final Set<String> _msgListeningRooms = {};
-  
+  Map<int, int> _unreadCount = {};
   Map<int, bool> _hasUnread = {}; // (ยังไม่ได้ใช้ แต่เก็บไว้ตามของเดิม)
 
   String? currentUserId;
@@ -61,6 +58,26 @@ class _ChatPageState extends State<ChatPage> {
 final Set<String> _pinListeningRooms = {};
 
 
+  // -------------------------
+  // ✅ listen mute per room
+  // -------------------------
+  // void _listenMuteForRoom(String groupId) {
+  //   if (currentUserId == null) return;
+
+  //   FirebaseFirestore.instance
+  //       .collection('chat_groups')
+  //       .doc(groupId)
+  //       .collection('mute_settings')
+  //       .doc(currentUserId)
+  //       .snapshots()
+  //       .listen((doc) {
+  //     final muted = (doc.data()?['muted'] == true);
+  //     if (!mounted) return;
+  //     setState(() {
+  //       _mutedRooms[groupId] = muted;
+  //     });
+  //   });
+  // }
 
   void _initMuteListeners() {
     if (currentUserId == null) return;
@@ -168,6 +185,28 @@ void _listenPinForRoom(String groupId) {
     }
   }
 
+  // -------------------------
+  // ✅ listen pin per room
+  // -------------------------
+  // void _listenPinForRoom(String groupId) {
+  //   if (currentUserId == null) return;
+
+  //   // 📌 โครงสร้าง Firestore:
+  //   // chat_groups/{groupId}/pin_settings/{userId}  => { pinned: true/false }
+  //   FirebaseFirestore.instance
+  //       .collection('chat_groups')
+  //       .doc(groupId)
+  //       .collection('pin_settings')
+  //       .doc(currentUserId)
+  //       .snapshots()
+  //       .listen((doc) {
+  //     final pinned = (doc.data()?['pinned'] == true);
+  //     if (!mounted) return;
+  //     setState(() {
+  //       _pinnedRooms[groupId] = pinned;
+  //     });
+  //   });
+  // }
 
   void _initPinListeners() {
     if (currentUserId == null) return;
@@ -298,8 +337,7 @@ void _listenPinForRoom(String groupId) {
 
   for (var group in chatGroups) {
     final groupId = group['id'].toString();
-    if (_msgListeningRooms.contains(groupId)) continue;
-    _msgListeningRooms.add(groupId);
+    final groupIdInt = int.tryParse(groupId) ?? -1;
 
     FirebaseFirestore.instance
         .collection('chat_groups')
@@ -311,48 +349,66 @@ void _listenPinForRoom(String groupId) {
         .listen((snapshot) {
       if (snapshot.docs.isEmpty) return;
 
-       // ✅ 1) ดึงเวลา message ล่าสุดจาก doc แรก (เพราะ orderBy desc)
-  final first = snapshot.docs.first.data();
- final ts = first['timestamp'];
-int lastMs = 0;
-
-if (ts is Timestamp) {
-  lastMs = ts.millisecondsSinceEpoch;
-} else if (ts is int) {
-  lastMs = ts;
-} else if (ts is num) {
-  lastMs = ts.toInt();
-} else {
-  lastMs = 0; // timestamp หาย/ผิด type
-}
-
       int unreadCount = 0;
+      for (final doc in snapshot.docs) {
+        final message = doc.data();
+        final readBy = (message['readBy'] as List<dynamic>?) ?? [];
+        final senderId = message['senderId']?.toString() ?? '';
 
-       for (final doc in snapshot.docs) {
-    final message = doc.data();
-    final readBy = (message['readBy'] as List<dynamic>?) ?? [];
-    final senderId = message['senderId']?.toString() ?? '';
-
-    if (senderId != userId && !readBy.contains(userId)) {
-      unreadCount++;
-    }
-  }
+        if (senderId != userId && !readBy.contains(userId)) {
+          unreadCount++;
+        }
+      }
 
       if (!mounted) return;
 
-     // ✅ 2) กัน rebuild ถ้าทั้ง unread และเวลาไม่เปลี่ยน
-  final prevUnread = _unreadCount[groupId] ?? 0;
-  final prevLast = _lastMsgTs[groupId] ?? 0;
-  if (prevUnread == unreadCount && prevLast == lastMs) return;
+      // ✅ ลดการ rebuild ถ้าค่าเท่าเดิม
+      final prev = _unreadCount[groupIdInt] ?? 0;
+      if (prev == unreadCount) return;
 
-  
-setState(() {
-  _unreadCount[groupId] = unreadCount;   // ✅ ใช้ String
-  _lastMsgTs[groupId] = lastMs;
-});
-  });
+      setState(() {
+        _unreadCount[groupIdInt] = unreadCount;
+      });
+    });
   }
 }
+
+  // void initChatListener() async {
+  //   final user = await getUserSession();
+  //   if (user == null) return;
+  //   final userId = user['id'].toString();
+
+  //   for (var group in chatGroups) {
+  //     final groupId = group['id'].toString();
+  //     final groupIdInt = int.tryParse(groupId) ?? -1;
+
+  //     FirebaseFirestore.instance
+  //         .collection('chat_groups')
+  //         .doc(groupId)
+  //         .collection('messages')
+  //         .snapshots()
+  //         .listen((snapshot) async {
+  //       if (snapshot.docs.isEmpty) return;
+
+  //       int unreadCount = 0;
+
+  //       for (var doc in snapshot.docs) {
+  //         final message = doc.data();
+  //         final readBy = (message['readBy'] as List<dynamic>?) ?? [];
+  //         final senderId = message['senderId']?.toString() ?? '';
+
+  //         if (senderId != userId && !readBy.contains(userId)) {
+  //           unreadCount++;
+  //         }
+  //       }
+
+  //       if (!mounted) return;
+  //       setState(() {
+  //         _unreadCount[groupIdInt] = unreadCount;
+  //       });
+  //     });
+  //   }
+  // }
 
   /// ฟังก์ชันใหม่ ใช้ดึงชื่อเดียวและ url ของภาพ (ใช้ | แทน /)
   Map<String, String?> extractNameAndImage(String originalName, String userId) {
@@ -380,6 +436,96 @@ setState(() {
     return !(name.contains('/') || name.contains('(') || name.contains(')'));
   }
 
+
+   // =========================
+  // ✅ SEARCH messages in rooms (NEW)
+  // =========================
+//   Future<void> _searchInRoomMessages(String keyword) async {
+//     if (currentUserId == null) return;
+
+//   final q = keyword.trim().toLowerCase();
+
+// if (q.isEmpty) {
+//   if (!mounted) return;
+//   setState(() {
+//     _isSearchingMessages = false;
+//     _messageMatchRoom.clear();
+//   });
+//   return;
+// }
+
+// if (q.length < 2) {
+//   if (!mounted) return;
+//   setState(() {
+//     _isSearchingMessages = false;
+//     _messageMatchRoom.clear();
+//   });
+//   return;
+// }
+
+//     // debounce แบบง่าย: ถ้าพิมพ์ถี่เกิน 350ms ให้รอรอบถัดไป
+//     final now = DateTime.now();
+//     _lastSearchAt = now;
+//     await Future.delayed(const Duration(milliseconds: 350));
+//     // ถ้าเวลาถูกอัปเดต แปลว่ามีการพิมพ์ใหม่ -> ยกเลิกการค้นรอบนี้
+//     if (_lastSearchAt != now) return;
+
+//     if (!mounted) return;
+//     setState(() {
+//       _isSearchingMessages = true;
+//       _messageMatchRoom.clear();
+//     });
+
+//     // ✅ ป้องกันหน่วง: จำกัดจำนวนห้องที่สแกน
+//     // ปรับเลขได้: 20-40 กำลังดี
+//     const maxRoomsToScan = 30;
+
+//     // ✅ จำกัดจำนวนข้อความต่อห้อง
+//     // ปรับได้: 50-200 ตามที่ต้องการ
+//     const perRoomLimit = 120;
+
+//     final rooms = chatGroups.take(maxRoomsToScan).toList();
+
+//     try {
+//       for (final g in rooms) {
+//         final groupId = g['id'].toString();
+
+//       final snap = await FirebaseFirestore.instance
+//     .collection('chat_groups')
+//     .doc(groupId)
+//     .collection('messages')
+//     .orderBy('timestamp', descending: true) // ✅ ใช้ timestamp ตามของจริง
+//     .limit(perRoomLimit)
+//     .get();
+
+// bool found = false;
+
+// for (final d in snap.docs) {
+//   final data = d.data();
+
+//   // ✅ ของจริงคือ text
+//   final text = (data['text'] ?? '').toString();
+
+//   if (text.toLowerCase().contains(q)) {
+//     found = true;
+//     break;
+//   }
+// }
+
+//         if (!mounted) return;
+//         setState(() {
+//           _messageMatchRoom[groupId] = found;
+//         });
+//       }
+//     } catch (e) {
+//       debugPrint('❌ search messages error: $e');
+//     } finally {
+//       if (!mounted) return;
+//       setState(() {
+//         _isSearchingMessages = false;
+//       });
+//     }
+//   }
 
 Future<void> _searchInRoomMessages(String keyword) async {
   if (currentUserId == null) return;
@@ -478,35 +624,23 @@ final filteredGroups = chatGroups.where((group) {
   return nameMatch && msgMatch;
 }).toList();
 
+
+    // 2) ✅ sort ให้ปักหมุดขึ้นก่อน
     filteredGroups.sort((a, b) {
-  final aId = a['id'].toString();
-  final bId = b['id'].toString();
+      final aId = a['id'].toString();
+      final bId = b['id'].toString();
+      final aPinned = _pinnedRooms[aId] == true ? 1 : 0;
+      final bPinned = _pinnedRooms[bId] == true ? 1 : 0;
 
-  // 1) pinned ก่อน
-  final aPinned = _pinnedRooms[aId] == true ? 1 : 0;
-  final bPinned = _pinnedRooms[bId] == true ? 1 : 0;
-  final pinnedCmp = bPinned.compareTo(aPinned);
-  if (pinnedCmp != 0) return pinnedCmp;
+      // pinned desc
+      final pinnedCmp = bPinned.compareTo(aPinned);
+      if (pinnedCmp != 0) return pinnedCmp;
 
-  // 2) ห้องที่มี unread มาก่อน
- final aUnread = _unreadCount[aId] ?? 0;
-final bUnread = _unreadCount[bId] ?? 0;
-  final aHasUnread = aUnread > 0 ? 1 : 0;
-  final bHasUnread = bUnread > 0 ? 1 : 0;
-  final hasUnreadCmp = bHasUnread.compareTo(aHasUnread);
-  if (hasUnreadCmp != 0) return hasUnreadCmp;
-
-  // 3) เวลา message ล่าสุด (ใหม่สุดอยู่บน)
-  final aTs = _lastMsgTs[aId] ?? 0;
-  final bTs = _lastMsgTs[bId] ?? 0;
-  final tsCmp = bTs.compareTo(aTs);
-  if (tsCmp != 0) return tsCmp;
-
-  // 4) fallback: เรียงชื่อ
-  final an = (a['name'] ?? '').toString().toLowerCase();
-  final bn = (b['name'] ?? '').toString().toLowerCase();
-  return an.compareTo(bn);
-});
+      // fallback: เรียงชื่อ
+      final an = (a['name'] ?? '').toString();
+      final bn = (b['name'] ?? '').toString();
+      return an.toLowerCase().compareTo(bn.toLowerCase());
+    });
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
@@ -641,8 +775,10 @@ final bUnread = _unreadCount[bId] ?? 0;
                               final group = filteredGroups[index];
 
                               final groupId = group['id'].toString();
+                              final groupIdInt =
+                                  int.tryParse(group['id'].toString()) ?? -1;
 
-                             final unreadCount = _unreadCount[groupId] ?? 0; // ✅ ใช้ groupId string
+                              final unreadCount = _unreadCount[groupIdInt] ?? 0;
 
                               // mute state
                               final isMuted = _mutedRooms[groupId] == true;

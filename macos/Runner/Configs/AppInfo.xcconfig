@@ -8,7 +8,11 @@
 PRODUCT_NAME = private_chat
 
 // The application's bundle identifier
+<<<<<<< HEAD
 PRODUCT_BUNDLE_IDENTIFIER = com.chatapp.appnewsmore2
+=======
+PRODUCT_BUNDLE_IDENTIFIER = com.chatapp.appnewsmore
+>>>>>>> 6aa29aa18553b3e76c04f812f730e09db6118e3c
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2025 com.example. All rights reserved.
