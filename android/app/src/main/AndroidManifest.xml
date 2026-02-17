@@ -1,6 +1,6 @@
 <!-- <manifest xmlns:android="http://schemas.android.com/apk/res/android"> -->
     <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.chatapp.appnewsmore">
+    package="com.chatapp.appnewsmore2">
 
     <!-- สำหรับ Android ต่ำกว่า 13 -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
