@@ -41,13 +41,7 @@ void main() async {
   try {
     await Firebase.initializeApp();
 
-    final fcm = await FirebaseMessaging.instance.getToken();
-print('🍎 iOS FCM TOKEN = $fcm');
-
-final apns = await FirebaseMessaging.instance.getAPNSToken();
-print('🍎 iOS APNS TOKEN = $apns');
-
-     // 🔔 ขอ permission แจ้งเตือน
+         // 🔔 ขอ permission แจ้งเตือน
   NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
     alert: true,
     badge: true,
@@ -59,6 +53,14 @@ print('🍎 iOS APNS TOKEN = $apns');
   badge: true,
   sound: true,
 );
+
+    final fcm = await FirebaseMessaging.instance.getToken();
+print('🍎 iOS FCM TOKEN = $fcm');
+
+final apns = await FirebaseMessaging.instance.getAPNSToken();
+print('🍎 iOS APNS TOKEN = $apns');
+
+
 
   print('User granted permission: ${settings.authorizationStatus}');
 
