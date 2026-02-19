@@ -49,8 +49,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-<<<<<<< HEAD
-=======
+
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
@@ -61,6 +60,5 @@
 	<key>NSAllowsArbitraryLoads</key>
 	<true/>
 	</dict>
->>>>>>> 6aa29aa18553b3e76c04f812f730e09db6118e3c
 </dict>
 </plist>

@@ -385,11 +385,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-<<<<<<< HEAD
 				PRODUCT_BUNDLE_IDENTIFIER = com.chatapp.appnewsmore2.RunnerTests;
-=======
-				PRODUCT_BUNDLE_IDENTIFIER = com.chatapp.appnewsmore.RunnerTests;
->>>>>>> 6aa29aa18553b3e76c04f812f730e09db6118e3c
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/private_chat.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/private_chat";
@@ -403,11 +399,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-<<<<<<< HEAD
 				PRODUCT_BUNDLE_IDENTIFIER = com.chatapp.appnewsmore2.RunnerTests;
-=======
-				PRODUCT_BUNDLE_IDENTIFIER = com.chatapp.appnewsmore.RunnerTests;
->>>>>>> 6aa29aa18553b3e76c04f812f730e09db6118e3c
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/private_chat.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/private_chat";
@@ -421,11 +413,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-<<<<<<< HEAD
 				PRODUCT_BUNDLE_IDENTIFIER = com.chatapp.appnewsmore2.RunnerTests;
-=======
-				PRODUCT_BUNDLE_IDENTIFIER = com.chatapp.appnewsmore.RunnerTests;
->>>>>>> 6aa29aa18553b3e76c04f812f730e09db6118e3c
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/private_chat.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/private_chat";
