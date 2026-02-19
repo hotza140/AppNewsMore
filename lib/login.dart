@@ -37,15 +37,15 @@ class _LoginPageState extends State<LoginPage> {
 
   try {
     final uri = Uri.parse('https://privatechat-api.team.orangeworkshop.info/api/login');
-    final deviceToken = await FirebaseMessaging.instance.getToken();
-    //   String deviceToken = '';
-    // try {
-    //   await FirebaseMessaging.instance.requestPermission(); // iOS สำคัญ
-    //   deviceToken = (await FirebaseMessaging.instance.getToken()) ?? '';
-    // } catch (e) {
-    //   debugPrint('⚠️ FCM token error (ignore): $e');
-    //   deviceToken = '';
-    // }
+    // final deviceToken = await FirebaseMessaging.instance.getToken();
+      String deviceToken = '';
+    try {
+      await FirebaseMessaging.instance.requestPermission(); // iOS สำคัญ
+      deviceToken = (await FirebaseMessaging.instance.getToken()) ?? '';
+    } catch (e) {
+      debugPrint('⚠️ FCM token error (ignore): $e');
+      deviceToken = '';
+    }
 
     final response = await post(
       uri,
