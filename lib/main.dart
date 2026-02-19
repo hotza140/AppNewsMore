@@ -47,12 +47,31 @@ void main() async {
     badge: true,
     sound: true,
   );
+
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+  alert: true,
+  badge: true,
+  sound: true,
+);
+
   print('User granted permission: ${settings.authorizationStatus}');
 
      const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
+
+        const DarwinInitializationSettings initializationSettingsIOS =
+    DarwinInitializationSettings();
+
+const InitializationSettings initializationSettings =
+    InitializationSettings(
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsIOS,
+    );
+
+    // const InitializationSettings initializationSettings =
+    //     InitializationSettings(android: initializationSettingsAndroid);
+
+
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
 // ✅ handle กรณีเปิดแอปจากการกด Notification ตอนแอปปิด
@@ -75,19 +94,20 @@ FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       AndroidNotification? android = message.notification?.android;
       if (notification != null && android != null) {
         flutterLocalNotificationsPlugin.show(
-          notification.hashCode,
-          notification.title,
-          notification.body,
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'chat_channel',
-              'Chat Notifications',
-              importance: Importance.max,
-              priority: Priority.high,
-              showWhen: true,
-            ),
-          ),
-        );
+  notification.hashCode,
+  notification.title,
+  notification.body,
+  const NotificationDetails(
+    android: AndroidNotificationDetails(
+      'chat_channel',
+      'Chat Notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+    ),
+    iOS: DarwinNotificationDetails(),
+  ),
+);
       }
     });
 
