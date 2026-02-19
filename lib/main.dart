@@ -41,6 +41,12 @@ void main() async {
   try {
     await Firebase.initializeApp();
 
+    final fcm = await FirebaseMessaging.instance.getToken();
+print('🍎 iOS FCM TOKEN = $fcm');
+
+final apns = await FirebaseMessaging.instance.getAPNSToken();
+print('🍎 iOS APNS TOKEN = $apns');
+
      // 🔔 ขอ permission แจ้งเตือน
   NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
     alert: true,
@@ -89,27 +95,48 @@ FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
 });
 
 
-   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      RemoteNotification? notification = message.notification;
-      AndroidNotification? android = message.notification?.android;
-      if (notification != null && android != null) {
-        flutterLocalNotificationsPlugin.show(
-  notification.hashCode,
-  notification.title,
-  notification.body,
-  const NotificationDetails(
-    android: AndroidNotificationDetails(
-      'chat_channel',
-      'Chat Notifications',
-      importance: Importance.max,
-      priority: Priority.high,
-      showWhen: true,
+//    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+//       RemoteNotification? notification = message.notification;
+//       AndroidNotification? android = message.notification?.android;
+//       if (notification != null && android != null) {
+//         flutterLocalNotificationsPlugin.show(
+//   notification.hashCode,
+//   notification.title,
+//   notification.body,
+//   const NotificationDetails(
+//     android: AndroidNotificationDetails(
+//       'chat_channel',
+//       'Chat Notifications',
+//       importance: Importance.max,
+//       priority: Priority.high,
+//       showWhen: true,
+//     ),
+//     iOS: DarwinNotificationDetails(),
+//   ),
+// );
+//       }
+//     });
+
+FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+  final notification = message.notification;
+  if (notification == null) return;
+
+  flutterLocalNotificationsPlugin.show(
+    notification.hashCode,
+    notification.title,
+    notification.body,
+    const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'chat_channel',
+        'Chat Notifications',
+        importance: Importance.max,
+        priority: Priority.high,
+        showWhen: true,
+      ),
+      iOS: DarwinNotificationDetails(),
     ),
-    iOS: DarwinNotificationDetails(),
-  ),
-);
-      }
-    });
+  );
+});
 
   } catch (e, stack) {
     print('Firebase Init Error: $e\n$stack');
