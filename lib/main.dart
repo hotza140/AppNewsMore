@@ -82,6 +82,25 @@ const InitializationSettings initializationSettings =
 
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
+// ✅ ขอ permission ฝั่ง local notifications (กันพลาด iOS/Android 13+)
+final iosPlugin = flutterLocalNotificationsPlugin
+    .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+await iosPlugin?.requestPermissions(alert: true, badge: true, sound: true);
+
+final androidPlugin = flutterLocalNotificationsPlugin
+    .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+await androidPlugin?.requestNotificationsPermission();
+
+// ✅ สร้าง Android Channel ให้มีเสียง
+const AndroidNotificationChannel channel = AndroidNotificationChannel(
+  'chat_channel',
+  'Chat Notifications',
+  description: 'Chat notifications',
+  importance: Importance.max,
+  playSound: true,
+);
+await androidPlugin?.createNotificationChannel(channel);
+
 // ✅ handle กรณีเปิดแอปจากการกด Notification ตอนแอปปิด
 FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
   if (message != null) {
@@ -97,47 +116,29 @@ FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
 });
 
 
-//    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-//       RemoteNotification? notification = message.notification;
-//       AndroidNotification? android = message.notification?.android;
-//       if (notification != null && android != null) {
-//         flutterLocalNotificationsPlugin.show(
-//   notification.hashCode,
-//   notification.title,
-//   notification.body,
-//   const NotificationDetails(
-//     android: AndroidNotificationDetails(
-//       'chat_channel',
-//       'Chat Notifications',
-//       importance: Importance.max,
-//       priority: Priority.high,
-//       showWhen: true,
-//     ),
-//     iOS: DarwinNotificationDetails(),
-//   ),
-// );
-//       }
-//     });
-
 FirebaseMessaging.onMessage.listen((RemoteMessage message) {
   final notification = message.notification;
   if (notification == null) return;
 
   flutterLocalNotificationsPlugin.show(
-    notification.hashCode,
-    notification.title,
-    notification.body,
-    const NotificationDetails(
-      android: AndroidNotificationDetails(
-        'chat_channel',
-        'Chat Notifications',
-        importance: Importance.max,
-        priority: Priority.high,
-        showWhen: true,
-      ),
-      iOS: DarwinNotificationDetails(),
+  notification.hashCode,
+  notification.title,
+  notification.body,
+  const NotificationDetails(
+    android: AndroidNotificationDetails(
+      'chat_channel',
+      'Chat Notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+      playSound: true,
     ),
-  );
+    iOS: DarwinNotificationDetails(
+      presentSound: true,
+      sound: 'default',
+    ),
+  ),
+);
 });
 
   } catch (e, stack) {

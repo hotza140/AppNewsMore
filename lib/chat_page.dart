@@ -269,9 +269,26 @@ void _listenPinForRoom(String groupId) {
                 'hour': group['hour'],
                 'image': group['image'],
                 'created_by': group['created_by'].toString(),
+
+                 // ✅ สำคัญ: created_at (string หรือ timestamp)
+                  'created_at': group['created_at'], 
               },
             )
             .toList();
+
+            // ✅ ตั้ง default lastMsgTs = createdAt (เอาไว้กัน “ห้องไม่มีข้อความ”)
+            for (final g in chatGroups) {
+              final gid = g['id'].toString();
+              _lastMsgTs.putIfAbsent(gid, () {
+                final c = g['created_at'];
+                // ถ้า API ส่งเป็น ISO string:
+                if (c is String) return DateTime.tryParse(c)?.millisecondsSinceEpoch ?? 0;
+                // ถ้าเป็น int:
+                if (c is int) return c;
+                if (c is num) return c.toInt();
+                return 0;
+              });
+            }
 
         setState(() {
           isLoading = false;
@@ -309,48 +326,41 @@ void _listenPinForRoom(String groupId) {
         .limit(200) // ✅ จำกัดจำนวนข้อความที่ใช้คำนวณ unread
         .snapshots()
         .listen((snapshot) {
-      if (snapshot.docs.isEmpty) return;
+  // ❌ ไม่ return ทิ้ง แบบเดิม
+  // if (snapshot.docs.isEmpty) return;
 
-       // ✅ 1) ดึงเวลา message ล่าสุดจาก doc แรก (เพราะ orderBy desc)
-  final first = snapshot.docs.first.data();
- final ts = first['timestamp'];
-int lastMs = 0;
+  int lastMs = _lastMsgTs[groupId] ?? 0; // ✅ fallback (created_at)
+  int unreadCount = 0;
 
-if (ts is Timestamp) {
-  lastMs = ts.millisecondsSinceEpoch;
-} else if (ts is int) {
-  lastMs = ts;
-} else if (ts is num) {
-  lastMs = ts.toInt();
-} else {
-  lastMs = 0; // timestamp หาย/ผิด type
-}
+  if (snapshot.docs.isNotEmpty) {
+    final first = snapshot.docs.first.data();
+    final ts = first['timestamp'];
 
-      int unreadCount = 0;
+    if (ts is Timestamp) lastMs = ts.millisecondsSinceEpoch;
+    else if (ts is int) lastMs = ts;
+    else if (ts is num) lastMs = ts.toInt();
 
-       for (final doc in snapshot.docs) {
-    final message = doc.data();
-    final readBy = (message['readBy'] as List<dynamic>?) ?? [];
-    final senderId = message['senderId']?.toString() ?? '';
-
-    if (senderId != userId && !readBy.contains(userId)) {
-      unreadCount++;
+    for (final doc in snapshot.docs) {
+      final message = doc.data();
+      final readBy = (message['readBy'] as List<dynamic>?) ?? [];
+      final senderId = message['senderId']?.toString() ?? '';
+      if (senderId != userId && !readBy.contains(userId)) unreadCount++;
     }
   }
 
-      if (!mounted) return;
+  if (!mounted) return;
 
-     // ✅ 2) กัน rebuild ถ้าทั้ง unread และเวลาไม่เปลี่ยน
   final prevUnread = _unreadCount[groupId] ?? 0;
   final prevLast = _lastMsgTs[groupId] ?? 0;
   if (prevUnread == unreadCount && prevLast == lastMs) return;
 
-  
-setState(() {
-  _unreadCount[groupId] = unreadCount;   // ✅ ใช้ String
-  _lastMsgTs[groupId] = lastMs;
-});
+  setState(() {
+    _unreadCount[groupId] = unreadCount;
+    _lastMsgTs[groupId] = lastMs;
   });
+});
+
+
   }
 }
 
@@ -488,21 +498,13 @@ final filteredGroups = chatGroups.where((group) {
   final pinnedCmp = bPinned.compareTo(aPinned);
   if (pinnedCmp != 0) return pinnedCmp;
 
-  // 2) ห้องที่มี unread มาก่อน
- final aUnread = _unreadCount[aId] ?? 0;
-final bUnread = _unreadCount[bId] ?? 0;
-  final aHasUnread = aUnread > 0 ? 1 : 0;
-  final bHasUnread = bUnread > 0 ? 1 : 0;
-  final hasUnreadCmp = bHasUnread.compareTo(aHasUnread);
-  if (hasUnreadCmp != 0) return hasUnreadCmp;
-
-  // 3) เวลา message ล่าสุด (ใหม่สุดอยู่บน)
+  // 2) เวลา “กิจกรรมล่าสุด” (ข้อความล่าสุด หรือ created_at fallback)
   final aTs = _lastMsgTs[aId] ?? 0;
   final bTs = _lastMsgTs[bId] ?? 0;
   final tsCmp = bTs.compareTo(aTs);
   if (tsCmp != 0) return tsCmp;
 
-  // 4) fallback: เรียงชื่อ
+  // 3) fallback ชื่อ (กันเท่ากัน)
   final an = (a['name'] ?? '').toString().toLowerCase();
   final bn = (b['name'] ?? '').toString().toLowerCase();
   return an.compareTo(bn);
