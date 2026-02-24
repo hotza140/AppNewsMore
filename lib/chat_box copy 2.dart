@@ -826,7 +826,7 @@ Future<String?> _getPrivateChatGroupId(String friendId) async {
     return data['group_chat_id'].toString();
   }
 
-  print("❌ ERROR private chat: ${res.body}");
+  print("❌ ERROR News Global: ${res.body}");
   return null;
 }
 

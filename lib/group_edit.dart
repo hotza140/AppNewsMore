@@ -36,6 +36,9 @@ class _edit_NewGroupState extends State<edit_NewGroup> {
   // ✅ NEW: เก็บ id เพื่อนของเรา เพื่อเช็คว่าเพิ่มเพื่อนไปแล้วหรือยัง
   Set<int> myFriendIds = {};
 
+  // ✅ NEW: ทุกคนสามารถเพิ่มสมาชิกเข้ากลุ่มได้
+bool get canAddMembers => true;
+
   // ✅ เช็คว่าเป็นเจ้าของกลุ่มไหม (Owner เท่านั้นที่เห็นฟังก์ชันจัดการกลุ่มทั้งหมด)
   bool get isOwner {
     final me = (widget.currentUserId ?? '').trim();
@@ -563,23 +566,23 @@ class _edit_NewGroupState extends State<edit_NewGroup> {
             const SizedBox(width: 8),
           ],
 
-          // ✅ ปุ่มเพิ่ม/ลบสมาชิกในกลุ่ม (Owner เท่านั้น)
-          if (isOwner && !(isMember && isSelf))
-            CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              color: isMember
-                  ? CupertinoColors.destructiveRed
-                  : CupertinoColors.activeGreen,
-              child: Text(isMember ? "ลบ" : "เพิ่ม",
-                  style: const TextStyle(color: Colors.white)),
-              onPressed: () {
-                if (isMember) {
-                  confirmRemoveUser(user);
-                } else {
-                  addUserToGroup(user['id'].toString());
-                }
-              },
-            ),
+// ✅ เพิ่ม: ทุกคนเห็น / ลบ: เห็นเฉพาะ Owner
+if (!isMember || (isMember && isOwner && !isSelf))
+  CupertinoButton(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    color: isMember
+        ? CupertinoColors.destructiveRed
+        : CupertinoColors.activeGreen,
+    child: Text(isMember ? "ลบ" : "เพิ่ม",
+        style: const TextStyle(color: Colors.white)),
+    onPressed: () {
+      if (isMember) {
+        confirmRemoveUser(user); // owner เท่านั้นถึงจะเห็นปุ่มนี้
+      } else {
+        addUserToGroup(user['id'].toString()); // ทุกคนเพิ่มได้
+      }
+    },
+  ),
         ],
       ),
     );
@@ -644,8 +647,8 @@ Padding(
   ),
 ),
 
-            // ✅ Search + เพิ่มคนเข้ากลุ่ม (Owner เท่านั้น)
-            if (isOwner)
+          // ✅ Search + เพิ่มคนเข้ากลุ่ม (ทุกคน)
+if (canAddMembers)
               Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: CupertinoSearchTextField(
@@ -660,7 +663,7 @@ Padding(
             Expanded(
               child: isLoading
                   ? const Center(child: CupertinoActivityIndicator())
-                  : (isOwner && searchText.isNotEmpty)
+                  : (canAddMembers && searchText.isNotEmpty)
                       ? Column(
                           children: [
                             Padding(

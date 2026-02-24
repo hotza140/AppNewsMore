@@ -265,7 +265,7 @@ _showMessage(apiMessage);
       mainAxisSize: MainAxisSize.min,
       children: [
         const Text(
-          'PRIVATE CHAT',
+          'News Global',
           style: TextStyle(
             fontSize: 25,
             fontWeight: FontWeight.bold,

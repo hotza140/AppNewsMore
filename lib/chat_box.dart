@@ -826,7 +826,7 @@ Future<String?> _getPrivateChatGroupId(String friendId) async {
     return data['group_chat_id'].toString();
   }
 
-  print("❌ ERROR private chat: ${res.body}");
+  print("❌ ERROR News Global: ${res.body}");
   return null;
 }
 
@@ -1034,7 +1034,7 @@ void _showMessageOptions(Map<String, dynamic> messageData, String messageId) {
             if (isMe) ...[
               ListTile(
                 leading: const Icon(Icons.edit),
-                title: const Text('แก้ใข'),
+                title: const Text('แก้ไข'),
                 onTap: () {
                   Navigator.pop(context);
                   _editMessage(messageId, messageData);
@@ -2231,6 +2231,7 @@ Future<void> _startPrivateChat(String friendId, String friendName) async {
 
 
  Widget _buildMessage(Map<String, dynamic> data, String messageId) {
+  final bool edited = data['edited'] == true;
     final isPinned = _pinnedMessageIds.contains(messageId); // ✅ ย้ายขึ้นบน
    final deletedFor = (data['deletedFor'] as List<dynamic>? ?? []).cast<String>();
   if (deletedFor.contains(currentUserId)) {
@@ -2499,7 +2500,7 @@ const SizedBox(height: 4),
             ],
 
             Text(
-  DateFormat('dd MMM yyyy HH:mm').format(timestamp),
+  '${DateFormat('dd MMM yyyy HH:mm').format(timestamp)}${edited ? ' · แก้ไข' : ''}',
   style: TextStyle(
     fontSize: 12,
     color: isMe ? Colors.white70 : Colors.black54,
