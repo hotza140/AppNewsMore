@@ -155,15 +155,56 @@ HttpOverrides.global = MyHttpOverrides(); // 👈 เพิ่มตรงนี
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  bool _didNavigateOnResume = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+   if (state == AppLifecycleState.paused ||
+    state == AppLifecycleState.inactive) {
+  _didNavigateOnResume = false;
+}
+
+    if (state == AppLifecycleState.resumed) {
+  if (_didNavigateOnResume) return;
+
+  final nav = navigatorKey.currentState;
+  if (nav == null) return; // ✅ เพิ่มบรรทัดนี้ กัน resumed ตอนยังไม่มี navigator
+
+  _didNavigateOnResume = true;
+
+  nav.pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const MenuPage(initialIndex: 0)),
+    (route) => false,
+  );
+}
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'สื่อสารรายวัน',
+      title: 'News Global',
       debugShowCheckedModeBanner: false,
-      navigatorKey: navigatorKey, // ✅ เพิ่มตรงนี้
+      navigatorKey: navigatorKey,
       home: const SplashScreen(),
     );
   }
@@ -239,27 +280,14 @@ void initState() {
     }
   });
 
-  Future.delayed(const Duration(seconds: 2), () {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MenuPage(initialIndex: 0)),
-    );
-  });
+Future.delayed(const Duration(seconds: 2), () {
+  if (!mounted) return; // ✅ เพิ่มบรรทัดนี้
+  navigatorKey.currentState?.pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const MenuPage(initialIndex: 0)),
+    (route) => false,
+  );
+});
 }
-
-  // void initState() {
-  //   super.initState();
-
-  //   _controller = AnimationController(
-  //     vsync: this,
-  //     duration: const Duration(seconds: 1),
-  //   )..repeat();
-
-  //   Future.delayed(const Duration(seconds: 2), () {
-  //     Navigator.of(context).pushReplacement(
-  //       MaterialPageRoute(builder: (_) => const MenuPage(initialIndex: 0)),
-  //     );
-  //   });
-  // }
 
   @override
   void dispose() {
