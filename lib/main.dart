@@ -167,6 +167,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   bool _didNavigateOnResume = false;
+  bool _wentBackground = false; // ✅ เพิ่ม
 
   @override
   void initState() {
@@ -182,25 +183,57 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-   if (state == AppLifecycleState.paused ||
-    state == AppLifecycleState.inactive) {
-  _didNavigateOnResume = false;
-}
-
-    if (state == AppLifecycleState.resumed) {
-  if (_didNavigateOnResume) return;
-
-  final nav = navigatorKey.currentState;
-  if (nav == null) return; // ✅ เพิ่มบรรทัดนี้ กัน resumed ตอนยังไม่มี navigator
-
-  _didNavigateOnResume = true;
-
-  nav.pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const MenuPage(initialIndex: 0)),
-    (route) => false,
-  );
-}
+  // ✅ ถือว่า "ซ่อนแอปจริง" เฉพาะตอน paused (ไป background)
+  if (state == AppLifecycleState.paused) {
+    _wentBackground = true;
+    _didNavigateOnResume = false;
+    return;
   }
+
+  // ❗ inactive มักเกิดจาก permission dialog / call / control center
+  // ไม่ใช่การซ่อนแอปจริง ๆ → ไม่ต้องทำอะไร
+  if (state == AppLifecycleState.inactive) {
+    return;
+  }
+
+  if (state == AppLifecycleState.resumed) {
+    // ✅ ถ้าไม่ได้ไป background จริง ๆ ห้ามเด้งกลับหน้าแรก
+    if (!_wentBackground) return;
+
+    if (_didNavigateOnResume) return;
+
+    final nav = navigatorKey.currentState;
+    if (nav == null) return;
+
+    _didNavigateOnResume = true;
+    _wentBackground = false;
+
+    nav.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const MenuPage(initialIndex: 0)),
+      (route) => false,
+    );
+  }
+}
+//   void didChangeAppLifecycleState(AppLifecycleState state) {
+//    if (state == AppLifecycleState.paused ||
+//     state == AppLifecycleState.inactive) {
+//   _didNavigateOnResume = false;
+// }
+
+//     if (state == AppLifecycleState.resumed) {
+//   if (_didNavigateOnResume) return;
+
+//   final nav = navigatorKey.currentState;
+//   if (nav == null) return; // ✅ เพิ่มบรรทัดนี้ กัน resumed ตอนยังไม่มี navigator
+
+//   _didNavigateOnResume = true;
+
+//   nav.pushAndRemoveUntil(
+//     MaterialPageRoute(builder: (_) => const MenuPage(initialIndex: 0)),
+//     (route) => false,
+//   );
+// }
+//   }
 
   @override
   Widget build(BuildContext context) {
