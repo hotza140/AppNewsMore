@@ -1846,8 +1846,14 @@ Future<void> _saveAllMedia(List<String> images, List<String> videos) async {
       if (response.statusCode == 200) {
         var documentDirectory = await getTemporaryDirectory();
         File file = File('${documentDirectory.path}/${DateTime.now().millisecondsSinceEpoch}.jpg');
-        await file.writeAsBytes(response.bodyBytes);
-        bool? result = await GallerySaver.saveImage(file.path, albumName: "PrivateChat");
+        // await file.writeAsBytes(response.bodyBytes);
+        // bool? result = await GallerySaver.saveImage(file.path, albumName: "PrivateChat");
+        await file.writeAsBytes(response.bodyBytes, flush: true);
+final bool? result = await GallerySaver.saveImage(
+  file.path,
+  albumName: Platform.isIOS ? null : "PrivateChat",
+);
+
         if (result == true) savedCount++;
       }
     } catch (e) {
@@ -1862,8 +1868,13 @@ Future<void> _saveAllMedia(List<String> images, List<String> videos) async {
       if (response.statusCode == 200) {
         var documentDirectory = await getTemporaryDirectory();
         File file = File('${documentDirectory.path}/${DateTime.now().millisecondsSinceEpoch}.mp4');
-        await file.writeAsBytes(response.bodyBytes);
-        bool? result = await GallerySaver.saveVideo(file.path, albumName: "PrivateChat");
+        // await file.writeAsBytes(response.bodyBytes);
+        // bool? result = await GallerySaver.saveVideo(file.path, albumName: "PrivateChat");
+        await file.writeAsBytes(response.bodyBytes, flush: true);
+final bool? result = await GallerySaver.saveVideo(
+  file.path,
+  albumName: Platform.isIOS ? null : "PrivateChat",
+);
         if (result == true) savedCount++;
       }
     } catch (e) {
@@ -1892,9 +1903,15 @@ Future<void> _saveImage(String url) async {
 
     var documentDirectory = await getTemporaryDirectory();
     File file = File('${documentDirectory.path}/${DateTime.now().millisecondsSinceEpoch}.jpg');
-    await file.writeAsBytes(response.bodyBytes);
+    // await file.writeAsBytes(response.bodyBytes);
+    await file.writeAsBytes(response.bodyBytes, flush: true);
 
-    bool? result = await GallerySaver.saveImage(file.path, albumName: "PrivateChat");
+    // bool? result = await GallerySaver.saveImage(file.path, albumName: "PrivateChat");
+    final bool? result = await GallerySaver.saveImage(
+      file.path,
+      albumName: Platform.isIOS ? null : "PrivateChat",
+    );
+
     _showToast(result == true ? 'บันทึกรูปภาพแล้ว' : 'ไม่สามารถบันทึกรูปภาพได้');
   } catch (e) {
     print("Error saving image: $e");
@@ -1918,9 +1935,16 @@ Future<void> _saveVideo(String url) async {
 
     var documentDirectory = await getTemporaryDirectory();
     File file = File('${documentDirectory.path}/${DateTime.now().millisecondsSinceEpoch}.mp4');
-    await file.writeAsBytes(response.bodyBytes);
+    // await file.writeAsBytes(response.bodyBytes);
+    await file.writeAsBytes(response.bodyBytes, flush: true);
 
-    bool? result = await GallerySaver.saveVideo(file.path, albumName: "PrivateChat");
+
+    // bool? result = await GallerySaver.saveVideo(file.path, albumName: "PrivateChat");
+    final bool? result = await GallerySaver.saveVideo(
+  file.path,
+  albumName: Platform.isIOS ? null : "PrivateChat",
+);
+
     if (result == true) {
       _showToast('บันทึกวิดีโอแล้ว');
     } else {
