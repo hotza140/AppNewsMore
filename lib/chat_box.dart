@@ -1933,26 +1933,56 @@ Future<void> _saveVideo(String url) async {
 }
 
 // ฟังก์ชันขอ permission
+// Future<bool> _requestPermission() async {
+//   if (Platform.isAndroid) {
+//     if (await Permission.storage.isGranted) return true;
+
+//     if (await Permission.photos.isGranted && await Permission.videos.isGranted) return true;
+
+//     Map<Permission, PermissionStatus> statuses = await [
+//       Permission.storage,
+//       Permission.photos,
+//       Permission.videos,
+//     ].request();
+
+//     return statuses.values.every((status) => status.isGranted);
+//   } else if (Platform.isIOS) {
+//     var status = await Permission.photos.status;
+//     if (!status.isGranted) {
+//       status = await Permission.photos.request();
+//     }
+//     return status.isGranted;
+//   }
+//   return false;
+// }
 Future<bool> _requestPermission() async {
+  if (Platform.isIOS) {
+    // ✅ ขอสิทธิ์ "เพิ่มรูปลง Photos" สำหรับการเซฟ
+    final status = await Permission.photosAddOnly.request();
+
+    if (status.isGranted || status.isLimited) return true;
+
+    // ถ้าผู้ใช้กด "Don't Allow" ไปแล้ว → ต้องพาไป Settings
+    if (status.isPermanentlyDenied || status.isDenied || status.isRestricted) {
+      _showToast('กรุณาอนุญาต Photos ใน Settings เพื่อบันทึกรูป/วิดีโอ');
+      await openAppSettings();
+    }
+    return false;
+  }
+
   if (Platform.isAndroid) {
+    // ของคุณเดิมพอใช้ได้ (แต่ Android 13+ แนะนำปรับอีกทีถ้าจะชัวร์)
     if (await Permission.storage.isGranted) return true;
 
-    if (await Permission.photos.isGranted && await Permission.videos.isGranted) return true;
-
-    Map<Permission, PermissionStatus> statuses = await [
+    final statuses = await [
       Permission.storage,
       Permission.photos,
       Permission.videos,
     ].request();
 
-    return statuses.values.every((status) => status.isGranted);
-  } else if (Platform.isIOS) {
-    var status = await Permission.photos.status;
-    if (!status.isGranted) {
-      status = await Permission.photos.request();
-    }
-    return status.isGranted;
+    return statuses.values.every((s) => s.isGranted);
   }
+
   return false;
 }
 

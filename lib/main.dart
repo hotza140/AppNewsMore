@@ -117,28 +117,31 @@ FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
 
 
 FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-  final notification = message.notification;
-  if (notification == null) return;
+  final title = message.notification?.title ?? message.data['title'];
+  final body  = message.notification?.body  ?? message.data['body'];
+  if (title == null && body == null) return;
 
   flutterLocalNotificationsPlugin.show(
-  notification.hashCode,
-  notification.title,
-  notification.body,
-  const NotificationDetails(
-    android: AndroidNotificationDetails(
-      'chat_channel',
-      'Chat Notifications',
-      importance: Importance.max,
-      priority: Priority.high,
-      showWhen: true,
-      playSound: true,
+    DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    title ?? '',
+    body ?? '',
+    const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'chat_channel',
+        'Chat Notifications',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'default',
+        interruptionLevel: InterruptionLevel.timeSensitive,
+      ),
     ),
-    iOS: DarwinNotificationDetails(
-      presentSound: true,
-      sound: 'default',
-    ),
-  ),
-);
+  );
 });
 
   } catch (e, stack) {
