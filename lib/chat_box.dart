@@ -485,43 +485,34 @@ Future<void> _openImageGallery(
 }) async {
   if (imageUrls.isEmpty) return;
 
-  final Set<int> _listenerAttached = {};
-
-  final initialIndex =
-      imageUrls.indexOf(initialUrl).clamp(0, imageUrls.length - 1);
+  final initialIndex = imageUrls.indexOf(initialUrl).clamp(0, imageUrls.length - 1);
   final pageController = PageController(initialPage: initialIndex);
 
   int currentIndex = initialIndex;
 
-  // ✅ ทำ controller แยก “ต่อหน้า” จะนิ่งกว่า (iOS ชอบมาก)
-  final Map<int, TransformationController> controllers = {};
+  // ✅ คุมสถานะการซูม เพื่อกัน PageView แย่ง gesture
+  final TransformationController tfc = TransformationController();
   final ValueNotifier<bool> isZoomed = ValueNotifier<bool>(false);
 
-  TransformationController _getTfc(int i) {
-    return controllers.putIfAbsent(i, () => TransformationController());
+  void updateZoomState() {
+    final scale = tfc.value.getMaxScaleOnAxis();
+    isZoomed.value = scale > 1.01; // เกิน 1 นิดๆ ถือว่าซูมอยู่
   }
 
-  void _updateZoomState(int i) {
-    final tfc = _getTfc(i);
-    final scale = tfc.value.getMaxScaleOnAxis();
-    isZoomed.value = scale > 1.01;
-  }
+  tfc.addListener(updateZoomState);
 
   final result = await showDialog<bool>(
     context: context,
-    barrierDismissible: false,
+    barrierDismissible: false, // ✅ กันปิดด้วยการแตะมั่วๆ
     builder: (_) {
       return StatefulBuilder(
         builder: (context, setLocalState) {
-          final size = MediaQuery.of(context).size;
-          final screenW = size.width;
-          final screenH = size.height;
-
           return Material(
             color: Colors.black,
             child: SafeArea(
               child: Stack(
                 children: [
+                  // ✅ PageView + InteractiveViewer (ซูม/ลาก)
                   Positioned.fill(
                     child: ValueListenableBuilder<bool>(
                       valueListenable: isZoomed,
@@ -530,94 +521,67 @@ Future<void> _openImageGallery(
                           controller: pageController,
                           itemCount: imageUrls.length,
                           physics: zoomed
-                              ? const NeverScrollableScrollPhysics()
-                              : const BouncingScrollPhysics(),
+                              ? const NeverScrollableScrollPhysics() // ✅ ซูมอยู่ → ห้ามปัดหน้า
+                              : const BouncingScrollPhysics(),       // ✅ ไม่ซูม → ปัดหน้าได้
                           onPageChanged: (i) {
                             setLocalState(() => currentIndex = i);
 
-                            // ✅ แค่คำนวณสถานะ zoom ของหน้าที่ไป (ไม่รีเซ็ต)
-                            _updateZoomState(i);
+                            // ✅ เปลี่ยนหน้าแล้ว reset การซูม ไม่ให้ค่าซูมจากรูปก่อนหน้าค้าง
+                            tfc.value = Matrix4.identity();
+                            isZoomed.value = false;
                           },
                           itemBuilder: (context, index) {
                             final url = imageUrls[index];
-                            final tfc = _getTfc(index);
-
-                            // ✅ ผูก listener แค่ครั้งเดียวต่อหน้า
-                            if (!_listenerAttached.contains(index)) {
-                              _listenerAttached.add(index);
-                              tfc.addListener(() => _updateZoomState(index));
-                            }
 
                             return Center(
-                          child: InteractiveViewer(
-                            transformationController: tfc,
-                            panEnabled: true,
-                            scaleEnabled: true,
-
-                            constrained: false,
-                            clipBehavior: Clip.none,
-
-                            // ✅ เพิ่มบรรทัดนี้
-                            alignment: Alignment.center,
-
-                            minScale: 1.0,
-                            maxScale: 6.0,
-
-                            // ✅ เปลี่ยนจาก 200 → 1000 (หรือใช้ double.infinity)
-                            boundaryMargin: const EdgeInsets.all(1000),
-                            // boundaryMargin: const EdgeInsets.all(double.infinity),
-
-                            // ✅ ลดอาการดีดตอนปล่อยนิ้ว (ถ้าอยากให้เหมือน Photos)
-                            interactionEndFrictionCoefficient: 0.0001,
-
-                            child: SizedBox(
-                              width: screenW,
-                              height: screenH,
-                              child: Image.network(
-                                url,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.broken_image,
-                                  color: Colors.white70,
-                                  size: 64,
+                              child: InteractiveViewer(
+                                transformationController: tfc,
+                                panEnabled: true,
+                                scaleEnabled: true,
+                                minScale: 1.0,
+                                maxScale: 6.0,
+                                boundaryMargin: const EdgeInsets.all(120),
+                                child: Image.network(
+                                  url,
+                                  fit: BoxFit.contain,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.broken_image,
+                                    color: Colors.white70,
+                                    size: 64,
+                                  ),
+                                  loadingBuilder: (context, child, progress) {
+                                    if (progress == null) return child;
+                                    return const Center(child: CupertinoActivityIndicator());
+                                  },
                                 ),
-                                loadingBuilder: (context, child, progress) {
-                                  if (progress == null) return child;
-                                  return const Center(child: CupertinoActivityIndicator());
-                                },
                               ),
-                            ),
-                          ),
-                        );
+                            );
                           },
                         );
                       },
                     ),
                   ),
 
-                  // ปุ่มปิด
+                  // ✅ ปุ่มปิด (มุมบนซ้าย)
                   Positioned(
                     top: 8,
                     left: 8,
                     child: IconButton(
-                      icon: const Icon(Icons.close,
-                          color: Colors.white, size: 28),
+                      icon: const Icon(Icons.close, color: Colors.white, size: 28),
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
                   ),
 
-                  // ตัวเลขหน้า
+                  // ✅ ตัวเลขหน้า (ล่างกลาง)
                   Positioned(
-                    bottom:
-                        (messageText != null && messageText.trim().isNotEmpty)
-                            ? 90
-                            : 18,
+                    bottom: (messageText != null && messageText.trim().isNotEmpty) ? 90 : 18,
                     left: 0,
                     right: 0,
                     child: Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.black54,
                           borderRadius: BorderRadius.circular(14),
@@ -630,7 +594,7 @@ Future<void> _openImageGallery(
                     ),
                   ),
 
-                  // ข้อความใต้รูป
+                  // ✅ ข้อความใต้รูป (ถ้ามี)
                   if (messageText != null && messageText.trim().isNotEmpty)
                     Positioned(
                       left: 0,
@@ -651,13 +615,10 @@ Future<void> _openImageGallery(
                       ),
                     ),
 
-                  // ปุ่มดาวน์โหลด
+                  // ✅ ปุ่มดาวน์โหลด (มุมล่างขวา)
                   Positioned(
                     right: 12,
-                    bottom:
-                        (messageText != null && messageText.trim().isNotEmpty)
-                            ? 52
-                            : 12,
+                    bottom: (messageText != null && messageText.trim().isNotEmpty) ? 52 : 12,
                     child: FloatingActionButton(
                       backgroundColor: Colors.black54,
                       onPressed: () => Navigator.of(context).pop(true),
@@ -673,10 +634,8 @@ Future<void> _openImageGallery(
     },
   );
 
-  // cleanup
-  for (final c in controllers.values) {
-    c.dispose();
-  }
+  tfc.removeListener(updateZoomState);
+  tfc.dispose();
   isZoomed.dispose();
 
   if (result == true) {
