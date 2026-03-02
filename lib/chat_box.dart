@@ -1216,7 +1216,42 @@ void _showWhoReacted(String emoji, List<String> users) {
 
 
 
-void _toggleReaction(String messageId, String emoji) async {
+// void _toggleReaction(String messageId, String emoji) async {
+//   if (currentUserId == null) return;
+
+//   final docRef = FirebaseFirestore.instance
+//       .collection('chat_groups')
+//       .doc(widget.groupId)
+//       .collection('messages')
+//       .doc(messageId);
+
+//   await FirebaseFirestore.instance.runTransaction((transaction) async {
+//     final snapshot = await transaction.get(docRef);
+//     Map<String, dynamic> reactions =
+//         Map<String, dynamic>.from(snapshot.get('reactions') ?? {});
+
+//     List users = List.from(reactions[emoji] ?? []);
+
+//     if (users.contains(currentUserId)) {
+//       users.remove(currentUserId);
+
+//       // ถ้าไม่มีคนกดเลย → ลบ key ออกจาก map
+//       if (users.isEmpty) {
+//         reactions.remove(emoji);
+//       } else {
+//         reactions[emoji] = users;
+//       }
+
+//     } else {
+//       users.add(currentUserId);
+//       reactions[emoji] = users;
+//     }
+
+//     transaction.update(docRef, {'reactions': reactions});
+//   });
+// }
+
+Future<void> _toggleReaction(String messageId, String emoji) async {
   if (currentUserId == null) return;
 
   final docRef = FirebaseFirestore.instance
@@ -1225,30 +1260,39 @@ void _toggleReaction(String messageId, String emoji) async {
       .collection('messages')
       .doc(messageId);
 
+  bool didAdd = false;
+
   await FirebaseFirestore.instance.runTransaction((transaction) async {
     final snapshot = await transaction.get(docRef);
+
     Map<String, dynamic> reactions =
         Map<String, dynamic>.from(snapshot.get('reactions') ?? {});
 
-    List users = List.from(reactions[emoji] ?? []);
+    final users = List<String>.from(reactions[emoji] ?? []);
 
     if (users.contains(currentUserId)) {
+      // ✅ กดซ้ำ = เอาออก → ไม่ส่ง noti
       users.remove(currentUserId);
-
-      // ถ้าไม่มีคนกดเลย → ลบ key ออกจาก map
       if (users.isEmpty) {
         reactions.remove(emoji);
       } else {
         reactions[emoji] = users;
       }
-
+      didAdd = false;
     } else {
-      users.add(currentUserId);
+      // ✅ เพิ่มสติ๊กเกอร์ → ส่ง noti
+      users.add(currentUserId!);
       reactions[emoji] = users;
+      didAdd = true;
     }
 
     transaction.update(docRef, {'reactions': reactions});
   });
+
+  // ✅ ส่ง noti เฉพาะตอน "เพิ่ม" เท่านั้น
+  if (didAdd) {
+    await _sendNotificationToFriend(); // API เส้นเดิม
+  }
 }
 
 
