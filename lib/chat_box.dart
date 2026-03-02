@@ -2611,7 +2611,7 @@ const SizedBox(height: 4),
                     onTap: () => _openImageGallery(
   images,
   initialUrl: url,
-  messageText: text,
+  // messageText: text,
 ),
                     child: Image.network(
                       url,
