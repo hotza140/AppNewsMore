@@ -158,6 +158,8 @@ HttpOverrides.global = MyHttpOverrides(); // 👈 เพิ่มตรงนี
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+bool ignoreNextResumeToHome = false; // ✅ เพิ่ม
+
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -197,43 +199,51 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   if (state == AppLifecycleState.resumed) {
-    // ✅ ถ้าไม่ได้ไป background จริง ๆ ห้ามเด้งกลับหน้าแรก
-    if (!_wentBackground) return;
+  if (!_wentBackground) return;
 
-    if (_didNavigateOnResume) return;
-
-    final nav = navigatorKey.currentState;
-    if (nav == null) return;
-
-    _didNavigateOnResume = true;
+  // ✅ ถ้ารอบนี้เป็น resume จาก picker / gallery / file chooser
+  // ให้ข้ามการเด้งกลับหน้าแรก 1 ครั้ง
+  if (ignoreNextResumeToHome) {
+    ignoreNextResumeToHome = false;
     _wentBackground = false;
-
-    nav.pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const MenuPage(initialIndex: 0)),
-      (route) => false,
-    );
+    _didNavigateOnResume = false;
+    return;
   }
+
+  if (_didNavigateOnResume) return;
+
+  final nav = navigatorKey.currentState;
+  if (nav == null) return;
+
+  _didNavigateOnResume = true;
+  _wentBackground = false;
+
+  nav.pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const MenuPage(initialIndex: 0)),
+    (route) => false,
+  );
 }
-//   void didChangeAppLifecycleState(AppLifecycleState state) {
-//    if (state == AppLifecycleState.paused ||
-//     state == AppLifecycleState.inactive) {
-//   _didNavigateOnResume = false;
-// }
 
-//     if (state == AppLifecycleState.resumed) {
-//   if (_didNavigateOnResume) return;
+  // if (state == AppLifecycleState.resumed) {
+  //   // ✅ ถ้าไม่ได้ไป background จริง ๆ ห้ามเด้งกลับหน้าแรก
+  //   if (!_wentBackground) return;
 
-//   final nav = navigatorKey.currentState;
-//   if (nav == null) return; // ✅ เพิ่มบรรทัดนี้ กัน resumed ตอนยังไม่มี navigator
+  //   if (_didNavigateOnResume) return;
 
-//   _didNavigateOnResume = true;
+  //   final nav = navigatorKey.currentState;
+  //   if (nav == null) return;
 
-//   nav.pushAndRemoveUntil(
-//     MaterialPageRoute(builder: (_) => const MenuPage(initialIndex: 0)),
-//     (route) => false,
-//   );
-// }
-//   }
+  //   _didNavigateOnResume = true;
+  //   _wentBackground = false;
+
+  //   nav.pushAndRemoveUntil(
+  //     MaterialPageRoute(builder: (_) => const MenuPage(initialIndex: 0)),
+  //     (route) => false,
+  //   );
+  // }
+}
+
+
 
   @override
   Widget build(BuildContext context) {

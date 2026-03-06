@@ -1828,6 +1828,7 @@ Future<void> _sendMessage() async {
 
 Future<void> _pickImage() async {
   try {
+    ignoreNextResumeToHome = true; // ✅ เพิ่ม
     final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
       allowMultiple: true,
@@ -1850,7 +1851,7 @@ Future<void> _pickImage() async {
   try {
     // จำกัดไม่ให้เลือกเกิน 4 ไฟล์รวมรูปกับวิดีโอ
     if (_selectedImages.length + _selectedVideos.length >= 4) return;
-
+ignoreNextResumeToHome = true; // ✅ เพิ่ม
     final result = await FilePicker.platform.pickFiles(
       type: FileType.video,
       allowMultiple: true, // ✅ เลือกได้หลายวิดีโอ
