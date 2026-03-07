@@ -1878,9 +1878,9 @@ ignoreNextResumeToHome = true; // ✅ เพิ่ม
 
 Future<void> _saveAllMedia(List<String> images, List<String> videos) async {
   if (!await _requestPermission()) {
-  _showToast('กรุณาให้สิทธิ์การเข้าถึงไฟล์');
-  return;
-}
+    _showToast('กรุณาให้สิทธิ์การเข้าถึงไฟล์');
+    return;
+  }
 
   int savedCount = 0;
 
@@ -1935,9 +1935,9 @@ final bool? result = await GallerySaver.saveVideo(
 Future<void> _saveImage(String url) async {
 
   if (!await _requestPermission()) {
-  _showToast('กรุณาให้สิทธิ์การเข้าถึงภาพ');
-  return;
-}
+    _showToast('กรุณาให้สิทธิ์การเข้าถึงภาพ');
+    return;
+  }
 
   try {
     var response = await http.get(Uri.parse(url));
@@ -1966,10 +1966,10 @@ Future<void> _saveImage(String url) async {
 
 Future<void> _saveVideo(String url) async {
 
-  if (!await _requestPermission(forVideo: true)) {
-  _showToast('กรุณาให้สิทธิ์การเข้าถึงวิดีโอ');
-  return;
-}
+  if (!await _requestPermission()) {
+    _showToast('กรุณาให้สิทธิ์การเข้าถึงวิดีโอ');
+    return;
+  }
 
   try {
     var response = await http.get(Uri.parse(url));
@@ -2024,13 +2024,14 @@ Future<void> _saveVideo(String url) async {
 //   }
 //   return false;
 // }
-
-Future<bool> _requestPermission({bool forVideo = false}) async {
+Future<bool> _requestPermission() async {
   if (Platform.isIOS) {
+    // ✅ ขอสิทธิ์ "เพิ่มรูปลง Photos" สำหรับการเซฟ
     final status = await Permission.photosAddOnly.request();
 
     if (status.isGranted || status.isLimited) return true;
 
+    // ถ้าผู้ใช้กด "Don't Allow" ไปแล้ว → ต้องพาไป Settings
     if (status.isPermanentlyDenied || status.isDenied || status.isRestricted) {
       _showToast('กรุณาอนุญาต Photos ใน Settings เพื่อบันทึกรูป/วิดีโอ');
       await openAppSettings();
@@ -2039,53 +2040,20 @@ Future<bool> _requestPermission({bool forVideo = false}) async {
   }
 
   if (Platform.isAndroid) {
-    final status = forVideo
-        ? await Permission.videos.request()
-        : await Permission.photos.request();
+    // ของคุณเดิมพอใช้ได้ (แต่ Android 13+ แนะนำปรับอีกทีถ้าจะชัวร์)
+    if (await Permission.storage.isGranted) return true;
 
-    if (status.isGranted || status.isLimited) return true;
+    final statuses = await [
+      Permission.storage,
+      Permission.photos,
+      Permission.videos,
+    ].request();
 
-    if (status.isPermanentlyDenied) {
-      _showToast('กรุณาอนุญาตสิทธิ์ใน Settings เพื่อบันทึกไฟล์');
-      await openAppSettings();
-    }
-
-    return false;
+    return statuses.values.every((s) => s.isGranted);
   }
 
   return false;
 }
-
-// Future<bool> _requestPermission() async {
-//   if (Platform.isIOS) {
-//     // ✅ ขอสิทธิ์ "เพิ่มรูปลง Photos" สำหรับการเซฟ
-//     final status = await Permission.photosAddOnly.request();
-
-//     if (status.isGranted || status.isLimited) return true;
-
-//     // ถ้าผู้ใช้กด "Don't Allow" ไปแล้ว → ต้องพาไป Settings
-//     if (status.isPermanentlyDenied || status.isDenied || status.isRestricted) {
-//       _showToast('กรุณาอนุญาต Photos ใน Settings เพื่อบันทึกรูป/วิดีโอ');
-//       await openAppSettings();
-//     }
-//     return false;
-//   }
-
-//   if (Platform.isAndroid) {
-//     // ของคุณเดิมพอใช้ได้ (แต่ Android 13+ แนะนำปรับอีกทีถ้าจะชัวร์)
-//     if (await Permission.storage.isGranted) return true;
-
-//     final statuses = await [
-//       Permission.storage,
-//       Permission.photos,
-//       Permission.videos,
-//     ].request();
-
-//     return statuses.values.every((s) => s.isGranted);
-//   }
-
-//   return false;
-// }
 
 
 // ฟังก์ชันโชว์ SnackBar

@@ -385,13 +385,10 @@ void _listenPinForRoom(String groupId) {
     return {'name': fallbackName, 'url': null};
   }
 
-  // bool canShowManageButton(String name, String? createdBy) {
-  //   // (คงของเดิม) : แสดงปุ่ม gear เฉพาะชื่อที่ไม่ใช่ format chat ส่วนตัว
-  //   return !(name.contains('/') || name.contains('(') || name.contains(')'));
-  // }
-  bool canShowManageButton(dynamic code) {
-  return code != null && code.toString().isNotEmpty;
-}
+  bool canShowManageButton(String name, String? createdBy) {
+    // (คงของเดิม) : แสดงปุ่ม gear เฉพาะชื่อที่ไม่ใช่ format chat ส่วนตัว
+    return !(name.contains('/') || name.contains('(') || name.contains(')'));
+  }
 
 
 Future<void> _searchInRoomMessages(String keyword) async {
@@ -935,11 +932,10 @@ final filteredGroups = chatGroups.where((group) {
                                     // =========================
                                     // ✅ ปุ่มจัดการกลุ่ม
                                     // =========================
-                                    // if (canShowManageButton(
-                                    //   group['name'],
-                                    //   group['created_by']?.toString(),
-                                    // ))
-                                    if (canShowManageButton(group['code']))
+                                    if (canShowManageButton(
+                                      group['name'],
+                                      group['created_by']?.toString(),
+                                    ))
                                       CupertinoButton(
                                         padding: const EdgeInsets.all(6),
                                         color: Colors.grey.shade200,
