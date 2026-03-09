@@ -98,9 +98,6 @@ String? _lastSenderId;
   bool _isUploading = false; // แสดง loading ตอนส่งข้อความ
   bool _isLoadingUsers = true; // แสดง loading ตอนโหลดรายชื่อผู้ใช้
 
-double _uploadProgress = 0.0; // 0.0 - 1.0
-String _uploadLabel = '';
-
   Map<String, String> _userNamesCache = {}; // แคชชื่อผู้ใช้ {id: name}
   Map<String, String> _userloadpic = {}; // แคชชื่อผู้ใช้ {id: name}
 
@@ -116,49 +113,6 @@ bool _markReadBusy = false;
 Timer? _searchDebounce;
 
 bool _usersLoadedOnce = false;
-
-
-Future<String> _uploadFileWithProgress({
-  required File file,
-  required Reference ref,
-  required String label,
-  required int fileIndex,
-  required int totalFiles,
-  String? contentType,
-}) async {
-  final metadata = contentType != null
-      ? SettableMetadata(contentType: contentType)
-      : null;
-
-  final task = metadata != null ? ref.putFile(file, metadata) : ref.putFile(file);
-
-  late final StreamSubscription sub;
-
-  sub = task.snapshotEvents.listen((snapshot) {
-    final totalBytes = snapshot.totalBytes;
-    final transferred = snapshot.bytesTransferred;
-
-    if (totalBytes > 0 && mounted) {
-      final fileProgress = transferred / totalBytes;
-
-      // เผื่อหลายไฟล์: รวม progress ทั้งหมดให้ไหลต่อเนื่อง
-      final overallProgress = ((fileIndex - 1) + fileProgress) / totalFiles;
-
-      setState(() {
-        _uploadProgress = overallProgress.clamp(0.0, 1.0);
-        _uploadLabel = '$label $fileIndex/$totalFiles';
-      });
-    }
-  });
-
-  try {
-    await task;
-    final url = await ref.getDownloadURL();
-    return url;
-  } finally {
-    await sub.cancel();
-  }
-}
 
 
 void _queueMarkRead(String messageId) {
@@ -1760,95 +1714,72 @@ Future<void> _sendMessage() async {
 
   setState(() {
     _isUploading = true;
-    _uploadProgress = 0.0;
-    _uploadLabel = 'กำลังเตรียมส่ง...';
   });
 
   final messageId = const Uuid().v4();
   List<String> images = [];
   List<String> videos = [];
 
-  final totalFiles = _selectedImages.length + _selectedVideos.length;
-  int currentFileIndex = 0;
-
   try {
     // อัปโหลดรูปภาพ
     for (var image in _selectedImages) {
-      currentFileIndex++;
-
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
       final ref = FirebaseStorage.instance
           .ref('chat_images/${widget.groupId}/$messageId/$fileName');
-
-      final file = File(image.path);
-
-      final url = await _uploadFileWithProgress(
-        file: file,
-        ref: ref,
-        label: 'กำลังอัปโหลดรูป',
-        fileIndex: currentFileIndex,
-        totalFiles: totalFiles == 0 ? 1 : totalFiles,
-        contentType: 'image/jpeg',
-      );
-
+      final bytes = await image.readAsBytes();
+      await ref.putData(bytes);
+      final url = await ref.getDownloadURL();
       images.add(url);
     }
 
     // อัปโหลดวิดีโอ
     for (var video in _selectedVideos) {
-      currentFileIndex++;
-
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
       final ref = FirebaseStorage.instance
           .ref('chat_videos/${widget.groupId}/$messageId/$fileName');
-
-      final file = File(video.path);
-
-      final url = await _uploadFileWithProgress(
-        file: file,
-        ref: ref,
-        label: 'กำลังอัปโหลดวิดีโอ',
-        fileIndex: currentFileIndex,
-        totalFiles: totalFiles == 0 ? 1 : totalFiles,
-        contentType: 'video/mp4',
-      );
-
+      final bytes = await video.readAsBytes();
+      await ref.putData(bytes);
+      final url = await ref.getDownloadURL();
       videos.add(url);
     }
 
-    if (mounted) {
-      setState(() {
-        _uploadProgress = 1.0;
-        _uploadLabel = 'กำลังส่งข้อความ...';
-      });
-    }
 
+    // บันทึกข้อความและลิงก์ภาพ/วิดีโอลง Firestore
     await FirebaseFirestore.instance
         .collection('chat_groups')
         .doc(widget.groupId)
         .collection('messages')
-        .doc(messageId)
+        .doc(messageId) // ใช้ doc แบบกำหนด id
         .set({
       'text': text,
       'images': images,
       'videos': videos,
       'senderId': currentUserId,
       'timestamp': FieldValue.serverTimestamp(),
-      'readBy': [currentUserId],
-      'replyTo': _replyingMessage,
-      'reactions': {},
+      'readBy': [currentUserId], // ✅ เพิ่ม currentUserId ลง array readBy
+      'replyTo': _replyingMessage, // ✅ เพิ่มตรงนี้
+      'reactions': {}, // ✅ เพิ่ม field reactions ว่างตอนสร้างข้อความ
       'deletedFor': [],
     });
 
     print('ส่งข้อความสำเร็จ');
 
+     // ✅ ล้าง text field & selection ทันที
     _textController.clear();
     _selectedImages.clear();
     _selectedVideos.clear();
     _replyingMessage = null;
 
-    await _sendNotificationToFriend();
+    // // เช็คสถานะเพื่อนก่อนส่ง noti
+    // bool friendIsActive = await _checkFriendActiveStatus();
+    // // bool friendIsActive = false; // ไม่ต้องเช็คสถานะแล้ว ส่งทุกครั้ง
+    // if (!friendIsActive) {
+    //   await _sendNotificationToFriend();
+    // }
 
+    await _sendNotificationToFriend(); // เรียกทุกครั้ง ไม่เช็คสถานะ
+
+    // --- ส่ง HTTP GET 2 API ตามที่ขอ ---
     final prefs = await SharedPreferences.getInstance();
     final authToken = prefs.getString('token_api') ?? '';
 
@@ -1873,21 +1804,20 @@ Future<void> _sendMessage() async {
     } catch (e) {
       print('Error เรียก API หลังส่งข้อความ: $e');
     }
-  } on FirebaseException catch (e) {
-    print('Upload error: ${e.code} ${e.message}');
-    _showToast('อัปโหลดไม่สำเร็จ: ${e.message ?? e.code}');
-  } catch (e, s) {
+
+    
+    setState(() {
+      // _textController.clear();
+      // _selectedImages.clear();
+      // _selectedVideos.clear();
+      // _replyingMessage = null;
+    });
+  } catch (e) {
     print('Upload error: $e');
-    print('Stack: $s');
-    _showToast('ส่งข้อความไม่สำเร็จ');
   } finally {
-    if (mounted) {
-      setState(() {
-        _isUploading = false;
-        _uploadProgress = 0.0;
-        _uploadLabel = '';
-      });
-    }
+    setState(() {
+      _isUploading = false;
+    });
   }
 }
 
@@ -3261,38 +3191,15 @@ CupertinoButton(
             ),
           ),
 
-        CupertinoButton(
-  padding: EdgeInsets.zero,
-  onPressed: currentUserId == null || _isUploading ? null : _sendMessage,
-  child: _isUploading
-      ? SizedBox(
-          width: 34,
-          height: 34,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 30,
-                height: 30,
-                child: CircularProgressIndicator(
-                  value: _uploadProgress > 0 ? _uploadProgress : null,
-                  strokeWidth: 2.6,
-                ),
-              ),
-              Text(
-                '${(_uploadProgress * 100).clamp(0, 100).toInt()}',
-                style: const TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  color: CupertinoColors.activeBlue,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-            ],
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            child: _isUploading
+                ? const CupertinoActivityIndicator()
+                : const Icon(CupertinoIcons.arrow_up_circle_fill),
+            onPressed: currentUserId == null || _isUploading
+                ? null
+                : _sendMessage,
           ),
-        )
-      : const Icon(CupertinoIcons.arrow_up_circle_fill),
-),
 
 
           CupertinoButton(
