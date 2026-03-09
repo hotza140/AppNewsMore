@@ -2196,11 +2196,9 @@ _openImageFullScreen(String imageUrl, {String? messageText}) async {
   final result = await showDialog(
     context: context,
     useRootNavigator: true,
-builder: (_) => GestureDetector(
-  onTap: () => Navigator.of(context, rootNavigator: true).pop(false),
-  child: Stack(
-    children: [
-      Container(
+    builder: (_) => GestureDetector(
+      onTap: () => Navigator.of(context, rootNavigator: true).pop(false),
+      child: Container(
         color: Colors.black87,
         alignment: Alignment.center,
         child: Column(
@@ -2208,17 +2206,11 @@ builder: (_) => GestureDetector(
           children: [
             Expanded(
               child: InteractiveViewer(
-                child: Image.network(
-  imageUrl,
-  loadingBuilder: (context, child, progress) {
-    if (progress == null) return child;
-    return const Center(
-      child: CupertinoActivityIndicator(),
-    );
-  },
-)
+                child: Image.network(imageUrl),
               ),
             ),
+
+            // ======= แสดงข้อความใต้รูป ========
             if (messageText != null && messageText.trim().isNotEmpty)
               Container(
                 width: double.infinity,
@@ -2234,23 +2226,22 @@ builder: (_) => GestureDetector(
                   ),
                 ),
               ),
+
+            // ปุ่มดาวน์โหลด
+         Positioned(
+  top: 40,
+  right: 12,
+  child: SafeArea(
+    child: IconButton(
+      icon: const Icon(Icons.download, color: Colors.white, size: 28),
+      onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
+    ),
+  ),
+),
           ],
         ),
       ),
-
-      Positioned(
-        top: 40,
-        right: 12,
-        child: SafeArea(
-          child: IconButton(
-            icon: const Icon(Icons.download, color: Colors.white, size: 28),
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
-          ),
-        ),
-      ),
-    ],
-  ),
-),
+    ),
   );
 
   if (result == true) {
@@ -2265,16 +2256,14 @@ _openVideoFullScreen(String videoUrl) async {
     builder: (_) => Stack(
       children: [
         _FullScreenVideoPlayer(url: videoUrl),
-      Positioned(
-  top: 40,
-  right: 12,
-  child: SafeArea(
-    child: IconButton(
-      icon: const Icon(Icons.download, color: Colors.white, size: 28),
-      onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
-    ),
-  ),
-),
+        Positioned(
+          bottom: 30,
+          right: 20,
+          child: IconButton(
+            icon: const Icon(Icons.download, color: Colors.white, size: 30),
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
+          ),
+        ),
       ],
     ),
   );
@@ -3477,40 +3466,23 @@ class _FullScreenVideoPlayerState extends State<_FullScreenVideoPlayer> {
   bool initialized = false;
   bool _showControls = true;
 
-  bool _isBuffering = false;
+  @override
+  void initState() {
+    super.initState();
 
-@override
-void initState() {
-  super.initState();
-
-  _controller = VideoPlayerController.network(widget.url);
-
-  _controller.addListener(() {
-    if (!mounted) return;
-
-    final value = _controller.value;
-    final buffering = value.isBuffering;
-
-    if (_isBuffering != buffering) {
-      setState(() {
-        _isBuffering = buffering;
+    _controller = VideoPlayerController.network(widget.url)
+      ..initialize().then((_) {
+        if (!mounted) return;
+        setState(() {
+          initialized = true;
+        });
+        _controller.play();
+        _controller.setLooping(false);
+        _controller.addListener(() {
+          if (mounted) setState(() {});
+        });
       });
-    } else {
-      setState(() {});
-    }
-  });
-
-  _controller.initialize().then((_) {
-    if (!mounted) return;
-    setState(() {
-      initialized = true;
-    });
-    _controller.play();
-    _controller.setLooping(false);
-  }).catchError((e) {
-    print('Video initialize error: $e');
-  });
-}
+  }
 
   @override
   void dispose() {
@@ -3544,28 +3516,14 @@ void initState() {
         },
         child: Stack(
           children: [
-           Center(
-  child: initialized
-      ? AspectRatio(
-          aspectRatio: _controller.value.aspectRatio,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              VideoPlayer(_controller),
-
-              // ✅ หมุนตอน buffering ระหว่างเล่น
-              if (_isBuffering)
-                Container(
-                  color: Colors.black26,
-                  child: const Center(
-                    child: CupertinoActivityIndicator(radius: 16),
-                  ),
-                ),
-            ],
-          ),
-        )
-      : const CupertinoActivityIndicator(radius: 16),
-),
+            Center(
+              child: initialized
+                  ? AspectRatio(
+                      aspectRatio: _controller.value.aspectRatio,
+                      child: VideoPlayer(_controller),
+                    )
+                  : const CupertinoActivityIndicator(),
+            ),
 
             if (_showControls) ...[
               // ปุ่มปิด
