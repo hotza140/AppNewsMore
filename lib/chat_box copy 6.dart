@@ -579,51 +579,31 @@ Future<void> _openImageGallery(
                           itemBuilder: (context, index) {
                             final url = imageUrls[index];
 
-             return ClipRect(
-  child: SizedBox.expand(
-    child: GestureDetector(
-      onDoubleTap: () {
-        final currentScale = tfc.value.getMaxScaleOnAxis();
-
-        if (currentScale > 1.01) {
-          tfc.value = Matrix4.identity();
-          isZoomed.value = false;
-        } else {
-          tfc.value = Matrix4.identity()..scale(2.0);
-          isZoomed.value = true;
-        }
-      },
-      child: InteractiveViewer(
-        transformationController: tfc,
-        panEnabled: true,
-        scaleEnabled: true,
-        minScale: 1.0,
-        maxScale: 4.0,
-        boundaryMargin: EdgeInsets.zero,
-        clipBehavior: Clip.hardEdge,
-        child: SizedBox.expand(
-          child: Image.network(
-            url,
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => const Center(
-              child: Icon(
-                Icons.broken_image,
-                color: Colors.white70,
-                size: 64,
-              ),
-            ),
-            loadingBuilder: (context, child, progress) {
-              if (progress == null) return child;
-              return const Center(
-                child: CupertinoActivityIndicator(),
-              );
-            },
-          ),
-        ),
-      ),
-    ),
-  ),
-);
+                            return Center(
+                              child: InteractiveViewer(
+                                transformationController: tfc,
+                                panEnabled: true,
+                                scaleEnabled: true,
+                                minScale: 1.0,
+                                maxScale: 6.0,
+                                boundaryMargin: const EdgeInsets.all(120),
+                                child: Image.network(
+                                  url,
+                                  fit: BoxFit.contain,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.broken_image,
+                                    color: Colors.white70,
+                                    size: 64,
+                                  ),
+                                  loadingBuilder: (context, child, progress) {
+                                    if (progress == null) return child;
+                                    return const Center(child: CupertinoActivityIndicator());
+                                  },
+                                ),
+                              ),
+                            );
                           },
                         );
                       },
@@ -1564,14 +1544,13 @@ Future<void> _loadMoreMessages() async {
 
 
   @override
-void dispose() {
-  _pinnedSub?.cancel();
-  _searchDebounce?.cancel();
-  _searchController.dispose();
-  _scrollController.dispose();
-  _setPresenceActive(false);
-  super.dispose();
-}
+  void dispose() {
+    _pinnedSub?.cancel();
+    _searchController.dispose(); // ✅ add
+    _scrollController.dispose();
+    _setPresenceActive(false);
+    super.dispose();
+  }
 
 
 // @override
@@ -2251,18 +2230,25 @@ _openVideoFullScreen(String videoUrl) async {
   final result = await showDialog(
     context: context,
     useRootNavigator: true,
-    builder: (_) => Stack(
-      children: [
-        _FullScreenVideoPlayer(url: videoUrl),
-        Positioned(
-          bottom: 30,
-          right: 20,
-          child: IconButton(
-            icon: const Icon(Icons.download, color: Colors.white, size: 30),
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
-          ),
+    builder: (_) => GestureDetector(
+      onTap: () => Navigator.of(context, rootNavigator: true).pop(false),
+      child: Container(
+        color: Colors.black87,
+        alignment: Alignment.center,
+        child: Stack(
+          children: [
+            Center(child: _FullScreenVideoPlayer(url: videoUrl)),
+            Positioned(
+              bottom: 30,
+              right: 30,
+              child: IconButton(
+                icon: const Icon(Icons.download, color: Colors.white, size: 30),
+                onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     ),
   );
 
@@ -3364,31 +3350,28 @@ class VideoWidget extends StatefulWidget {
   State<VideoWidget> createState() => _VideoWidgetState();
 }
 
-class _VideoWidgetState extends State<VideoWidget>
-    with AutomaticKeepAliveClientMixin {
+class _VideoWidgetState extends State<VideoWidget> with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
-
   late VideoPlayerController _controller;
   bool initialized = false;
 
   @override
   void initState() {
     super.initState();
-
     if (widget.isLocal) {
       _controller = VideoPlayerController.file(File(widget.url))
         ..initialize().then((_) {
-          if (!mounted) return;
-          setState(() => initialized = true);
-          _controller.pause();
+          setState(() {
+            initialized = true;
+          });
         });
     } else {
       _controller = VideoPlayerController.network(widget.url)
         ..initialize().then((_) {
-          if (!mounted) return;
-          setState(() => initialized = true);
-          _controller.pause();
+          setState(() {
+            initialized = true;
+          });
         });
     }
   }
@@ -3401,51 +3384,75 @@ class _VideoWidgetState extends State<VideoWidget>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-
     if (!initialized) {
-      return Container(
+      return const SizedBox(
         width: 100,
         height: 100,
-        color: Colors.black12,
-        child: const Center(child: CupertinoActivityIndicator()),
+        child: CupertinoActivityIndicator(),
       );
     }
-
-    return Container(
-      width: 100,
-      height: 100,
-      color: Colors.black,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox(
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // GestureDetector แค่ส่วนวิดีโอ (thumbnail) สำหรับเล่น/หยุด
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              if (_controller.value.isPlaying) {
+                _controller.pause();
+              } else {
+                _controller.play();
+              }
+            });
+          },
+          child: SizedBox(
             width: 100,
             height: 100,
-            child: FittedBox(
-              fit: BoxFit.cover,
-              child: SizedBox(
-                width: _controller.value.size.width,
-                height: _controller.value.size.height,
-                child: VideoPlayer(_controller),
-              ),
-            ),
+            child: VideoPlayer(_controller),
           ),
+        ),
+
+        if (!_controller.value.isPlaying)
           Container(
             width: 40,
             height: 40,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Colors.black54,
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.play_arrow,
               color: Colors.white,
-              size: 28,
+              size: 30,
             ),
           ),
-        ],
-      ),
+
+        // ปุ่ม fullscreen แยก GestureDetector ออกมา เพื่อให้กดแล้วขยายจอ (ไม่เล่น/หยุดวิดีโอ)
+        Positioned(
+          top: 4,
+          right: 4,
+          child: GestureDetector(
+            onTap: () {
+              final chatPageState = context.findAncestorStateOfType<_ChatPage_CodeState>();
+              if (chatPageState != null) {
+                chatPageState._openVideoFullScreen(widget.url);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Icon(
+                Icons.fullscreen,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -3462,22 +3469,16 @@ class _FullScreenVideoPlayer extends StatefulWidget {
 class _FullScreenVideoPlayerState extends State<_FullScreenVideoPlayer> {
   late VideoPlayerController _controller;
   bool initialized = false;
-  bool _showControls = true;
 
   @override
   void initState() {
     super.initState();
-
     _controller = VideoPlayerController.network(widget.url)
       ..initialize().then((_) {
-        if (!mounted) return;
         setState(() {
           initialized = true;
-        });
-        _controller.play();
-        _controller.setLooping(false);
-        _controller.addListener(() {
-          if (mounted) setState(() {});
+          _controller.play();
+          _controller.setLooping(true);
         });
       });
   }
@@ -3488,116 +3489,19 @@ class _FullScreenVideoPlayerState extends State<_FullScreenVideoPlayer> {
     super.dispose();
   }
 
-  String _fmt(Duration d) {
-    final h = d.inHours;
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-
-    if (h > 0) {
-      return '$h:$m:$s';
-    }
-    return '${d.inMinutes}:${s}';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final position = initialized ? _controller.value.position : Duration.zero;
-    final duration = initialized ? _controller.value.duration : Duration.zero;
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: GestureDetector(
-        onTap: () {
-          setState(() {
-            _showControls = !_showControls;
-          });
-        },
-        child: Stack(
-          children: [
-            Center(
-              child: initialized
-                  ? AspectRatio(
-                      aspectRatio: _controller.value.aspectRatio,
-                      child: VideoPlayer(_controller),
-                    )
-                  : const CupertinoActivityIndicator(),
-            ),
-
-            if (_showControls) ...[
-              // ปุ่มปิด
-              Positioned(
-                top: 40,
-                left: 12,
-                child: SafeArea(
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ),
-              ),
-
-              // ปุ่มเล่น/หยุดกลางจอ
-              Center(
-                child: IconButton(
-                  iconSize: 64,
-                  color: Colors.white,
-                  icon: Icon(
-                    _controller.value.isPlaying ? Icons.pause_circle : Icons.play_circle,
-                  ),
-                  onPressed: () {
-                    if (!initialized) return;
-                    setState(() {
-                      if (_controller.value.isPlaying) {
-                        _controller.pause();
-                      } else {
-                        _controller.play();
-                      }
-                    });
-                  },
-                ),
-              ),
-
-              // แถบเวลา + เลื่อน
-              Positioned(
-                left: 12,
-                right: 12,
-                bottom: 24,
-                child: SafeArea(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        VideoProgressIndicator(
-                          _controller,
-                          allowScrubbing: true,
-                          padding: EdgeInsets.zero,
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Text(
-                              _fmt(position),
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
-                            ),
-                            const Spacer(),
-                            Text(
-                              _fmt(duration),
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
+    return GestureDetector(
+      onTap: () => Navigator.of(context).pop(),
+      child: Container(
+        color: Colors.black87,
+        child: Center(
+          child: initialized
+              ? AspectRatio(
+                  aspectRatio: _controller.value.aspectRatio,
+                  child: VideoPlayer(_controller),
+                )
+              : const CupertinoActivityIndicator(),
         ),
       ),
     );

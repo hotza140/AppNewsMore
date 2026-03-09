@@ -579,51 +579,31 @@ Future<void> _openImageGallery(
                           itemBuilder: (context, index) {
                             final url = imageUrls[index];
 
-             return ClipRect(
-  child: SizedBox.expand(
-    child: GestureDetector(
-      onDoubleTap: () {
-        final currentScale = tfc.value.getMaxScaleOnAxis();
-
-        if (currentScale > 1.01) {
-          tfc.value = Matrix4.identity();
-          isZoomed.value = false;
-        } else {
-          tfc.value = Matrix4.identity()..scale(2.0);
-          isZoomed.value = true;
-        }
-      },
-      child: InteractiveViewer(
-        transformationController: tfc,
-        panEnabled: true,
-        scaleEnabled: true,
-        minScale: 1.0,
-        maxScale: 4.0,
-        boundaryMargin: EdgeInsets.zero,
-        clipBehavior: Clip.hardEdge,
-        child: SizedBox.expand(
-          child: Image.network(
-            url,
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => const Center(
-              child: Icon(
-                Icons.broken_image,
-                color: Colors.white70,
-                size: 64,
-              ),
-            ),
-            loadingBuilder: (context, child, progress) {
-              if (progress == null) return child;
-              return const Center(
-                child: CupertinoActivityIndicator(),
-              );
-            },
-          ),
-        ),
-      ),
-    ),
-  ),
-);
+                            return Center(
+                              child: InteractiveViewer(
+                                transformationController: tfc,
+                                panEnabled: true,
+                                scaleEnabled: true,
+                                minScale: 1.0,
+                                maxScale: 6.0,
+                                boundaryMargin: const EdgeInsets.all(120),
+                                child: Image.network(
+                                  url,
+                                  fit: BoxFit.contain,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.broken_image,
+                                    color: Colors.white70,
+                                    size: 64,
+                                  ),
+                                  loadingBuilder: (context, child, progress) {
+                                    if (progress == null) return child;
+                                    return const Center(child: CupertinoActivityIndicator());
+                                  },
+                                ),
+                              ),
+                            );
                           },
                         );
                       },
